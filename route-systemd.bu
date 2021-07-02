@@ -1,0 +1,32 @@
+variant: fcos
+version: 1.2.0
+systemd:
+  units:
+  - contents: |
+      [Unit]
+      Description=ip-route-add
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=oneshot
+      ExecStart=ip route add 20.64.0.0/24 via 10.0.2.2
+
+      [Install]
+      WantedBy=multi-user.target
+    enabled: false
+    name: ip-route-add.service
+  - contents: |
+      [Unit]
+      Description=nmcli-con-modify
+      After=NetworkManager.service
+
+      [Service]
+      Type=oneshot
+      ExecStart=nmcli con modify "Wired connection 1" +ipv4.routes "20.64.0.0/24 10.0.2.2"
+      ExecStart=nmcli con up "Wired connection 1"
+
+      [Install]
+      WantedBy=multi-user.target
+    enabled: true
+    name: nmcli-con-modify.service

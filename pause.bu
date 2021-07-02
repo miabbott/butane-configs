@@ -1,0 +1,14 @@
+variant: fcos
+version: 1.0.0
+passwd:
+  users:
+    - name: core
+      ssh_authorized_keys:
+          - ssh-rsa AAAA...
+storage:
+  files:
+    - path: /etc/kubernetes/kubelet-pause-image-override
+      contents:
+        inline: |
+          registry.fedoraproject.org/fedora:34
+      mode: 0644

@@ -1,0 +1,27 @@
+variant: fcos
+version: 1.3.0
+passwd:
+  users:
+    - name: core
+      ssh_authorized_keys:
+          - ssh-rsa AAAA...
+systemd:
+  units:
+    - name: kube-watch.service
+      contents: |
+        [Service]
+        ExecStart=/usr/bin/echo "Found it"
+        RemainAfterExit=yes
+        Type=oneshot
+        [Install]
+        WantedBy=multi-user.target
+    - name: kube-watch.path
+      enabled: true
+      contents: |
+        [Path]
+        PathExists=/etc/hello/kubeconfig
+        [Install]
+        WantedBy=multi-user.target
+storage:
+  directories:
+    - path: /etc/hello

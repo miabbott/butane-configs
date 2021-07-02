@@ -1,0 +1,18 @@
+variant: fcos
+version: 1.2.0
+passwd:
+  users:
+    - name: core
+      password_hash: ...
+      ssh_authorized_keys:
+        - ssh-rsa AAAA...
+storage:
+  files:
+      - contents:
+          source: data:;base64,VkxBTj15ZXMKVFlQRT1WbGFuClBIWVNERVY9Ym9uZDAKVkxBTl9JRD03MzMKUkVPUkRFUl9IRFI9eWVzCkdWUlA9bm8KTVZSUD1ubwpIV0FERFI9Ck5BTUU9dmxhbjczMwpERVZJQ0U9Ym9uZDAuNzMzCk9OQk9PVD15ZXMKQlJJREdFPWJyNzMzCg==
+        mode: 420
+        path: /etc/sysconfig/network-scripts/ifcfg-infoblox-vlan
+      - contents:
+          source: data:;base64,U1RQPW5vClRZUEU9QnJpZGdlClBST1hZX01FVEhPRD1ub25lCkJST1dTRVJfT05MWT1ubwpCT09UUFJPVE89bm9uZQpJUFY2X0RJU0FCTEVEPXllcwpJUFY2SU5JVD1ubwpJUFY2X0ZBSUxVUkVfRkFUQUw9bm8KTkFNRT1icjczMwpERVZJQ0U9YnI3MzMKT05CT09UPXllcwpBVVRPQ09OTkVDVF9TTEFWRVM9eWVzCg==
+        mode: 420
+        path: /etc/sysconfig/network-scripts/ifcfg-infoblox-bridge

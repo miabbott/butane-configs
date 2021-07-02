@@ -1,0 +1,20 @@
+variant: fcos
+version: 1.2.0
+passwd:
+  users:
+    - name: core
+      password_hash: ...
+      ssh_authorized_keys:
+        - ssh-rsa AAAA...
+storage:
+  luks:
+    - name: static-key-example
+      device: /dev/vdb
+      key_file:
+        inline: thisisasafepassword
+  filesystems:
+    - path: /var/lib
+      device: /dev/disk/by-id/dm-name-static-key-example
+      format: xfs
+      label: VAR-LIB
+      with_mount_unit: true

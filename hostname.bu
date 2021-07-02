@@ -1,0 +1,8 @@
+variant: fcos
+version: 1.2.0
+storage:
+  files:
+    - path: /etc/hostname
+      contents:
+        inline: worker0.example.com
+      mode: 0644

@@ -1,0 +1,26 @@
+variant: fcos
+version: 1.3.0
+passwd:
+  users:
+    - name: core
+      ssh_authorized_keys:
+          - ssh-rsa AAAA...
+storage:
+    files:
+      - path: /etc/envfile
+        mode: 0644
+        contents:
+          inline: |
+            KUBE="FCOS"
+systemd:
+  units:
+    - name: kube-env.service
+      enabled: true
+      contents: |
+        [Service]
+        EnvironmentFile=/etc/envfile
+        ExecStart=/usr/bin/echo ${KUBE}
+        RemainAfterExit=yes
+        Type=oneshot
+        [Install]
+        WantedBy=multi-user.target

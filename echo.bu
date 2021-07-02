@@ -1,0 +1,28 @@
+variant: fcos
+version: 1.0.0
+passwd:
+  users:
+    - name: core
+      ssh_authorized_keys:
+          - ssh-rsa AAAA...
+storage:
+  files:
+    - path: /etc/kubernetes/kubelet-pause-image-override
+      contents:
+        inline: |
+          PAUSE="registry.fedoraproject.org/fedora:34"
+      mode: 0644
+systemd:
+  units:
+    - name: echo.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=An echo unit
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        EnvironmentFile=/etc/kubernetes/kubelet-pause-image-override
+        ExecStart=/usr/bin/echo ${PAUSE}
+        [Install]
+        WantedBy=multi-user.target

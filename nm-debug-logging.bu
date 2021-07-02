@@ -1,0 +1,18 @@
+variant: fcos
+version: 1.2.0
+passwd:
+  users:
+    - name: core
+      password_hash: ...
+      ssh_authorized_keys:
+        - ssh-rsa AAAA...
+storage:
+  files:
+    - path: /etc/NetworkManager/conf.d/10-debug-logging.conf
+      contents:
+        inline: |
+          [logging]
+          level=DEBUG
+      user:
+        name: root
+      mode: 0644

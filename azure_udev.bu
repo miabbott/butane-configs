@@ -1,0 +1,20 @@
+variant: fcos
+version: 1.2.0
+passwd:
+  users:
+    - name: miabbott
+      password_hash: ...
+      ssh_authorized_keys:
+        - ssh-rsa AAAA...
+storage:
+  disks:
+  - device: /dev/disk/azure/scsi1/lun0
+    partitions:
+    - size_mib: 0
+      start_mib: 0
+      label: varlibetcd
+  filesystems:
+    - path: /var/lib/etcd
+      device: /dev/disk/by-partlabel/varlibetcd
+      format: xfs
+      with_mount_unit: true

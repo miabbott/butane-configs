@@ -1,0 +1,108 @@
+variant: fcos
+version: 1.0.0
+passwd:
+  users:
+    - name: core
+      password_hash: ...
+      ssh_authorized_keys:
+          - ssh-rsa AAAA...
+systemd:
+  units:
+    - name: upgrade.service
+      enabled: true
+      contents: |
+        [Unit]
+        Wants=network-online.target
+        After=network-online.target
+        ConditionPathExists=!/var/upgrade-done
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/usr/local/bin/upgrade.sh
+        [Install]
+        WantedBy=multi-user.target
+storage:
+  files:
+    - path: /etc/containers/registries.conf
+      contents:
+        inline: |
+          [[registry]]
+          prefix = "example.com/rhcos"
+          insecure = true
+          blocked = false
+          location = "192.168.122.1:5000/rhcos"
+          [[registry.mirror]]
+          location = "192.168.200.1:5000/rhcos"
+          insecure = true
+      mode: 0644
+      overwrite: true
+    - path: /usr/local/bin/upgrade.sh
+      mode: 0744
+      overwrite: true
+      contents:
+        inline: |
+          #!/usr/bin/bash
+          set -xeou pipefail
+          podman rm --force --all
+          podman rmi --force --all
+          podman pull example.com/rhcos:4.8.0-fc.3
+          commit=$(skopeo inspect containers-storage:example.com/rhcos:4.8.0-fc.3 | jq -r '.["Labels"]["com.coreos.ostree-commit"]')
+          img=$(podman images -q)
+          ctr=$(podman create ${img})
+          mnt=$(podman mount ${ctr})
+          rpm-ostree rebase --experimental ${mnt}/srv/repo:${commit}
+          touch /var/upgrade-done
+          systemctl reboot
+    - path: /etc/NetworkManager/system-connections/bond0.100.nmconnection
+      mode: 0600
+      contents:
+        inline: |
+          [connection]
+          id=bond0.100
+          type=vlan
+          interface-name=bond0.100
+          [vlan]
+          egress-priority-map=
+          flags=1
+          id=100
+          ingress-priority-map=
+          parent=bond0
+          [ipv4]
+          dns-search=
+          may-fail=false
+          method=auto
+    - path: /etc/NetworkManager/system-connections/bond0.nmconnection
+      mode: 0600
+      contents:
+        inline: |
+          [connection]
+          id=bond0
+          type=bond
+          interface-name=bond0
+          [bond]
+          miimon=100
+          mode=active-backup
+          [ipv4]
+          method=disabled
+          [ipv6]
+          method=disabled
+    - path: /etc/NetworkManager/system-connections/bond0-slave-enp1s0.nmconnection
+      mode: 0600
+      contents:
+        inline: |
+          [connection]
+          id=bond0-slave-enp1s0
+          type=ethernet
+          interface-name=enp1s0
+          master=bond0
+          slave-type=bond
+    - path: /etc/NetworkManager/system-connections/bond0-slave-enp2s0.nmconnection
+      mode: 0600
+      contents:
+        inline: |
+          [connection]
+          id=bond0-slave-enp2s0
+          type=ethernet
+          interface-name=enp2s0
+          master=bond0
+          slave-type=bond

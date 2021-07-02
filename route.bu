@@ -1,0 +1,17 @@
+variant: fcos
+version: 1.2.0
+passwd:
+  users:
+    - name: core
+      password_hash: ...
+      ssh_authorized_keys:
+        - ssh-rsa AAAA...
+storage:
+  files:
+    - path: /etc/sysconfig/network-scripts/route-ens6
+      contents:
+        inline: |
+          20.64.0.0/15 via 20.70.0.1 dev ens6
+      user:
+        name: root
+      mode: 0644

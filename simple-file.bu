@@ -1,0 +1,21 @@
+variant: fcos
+version: 1.1.0
+passwd:
+  groups:
+    - name: marketing
+      gid: 9000
+  users:
+    - name: miabbott
+      password_hash: ...
+      ssh_authorized_keys:
+        - ssh-rsa AAAA...
+      groups:
+        - marketing
+        - sudo
+storage:
+  files:
+    -
+      path: /etc/foo
+      mode: 0644
+      contents:
+        inline: this is the first

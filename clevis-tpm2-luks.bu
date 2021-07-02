@@ -1,0 +1,28 @@
+variant: fcos
+version: 1.3.0
+passwd:
+  users:
+    - name: core
+      password_hash: ...
+      ssh_authorized_keys:
+        - ssh-rsa AAAA...
+storage:
+  disks:
+    - device: /dev/sdb
+      partitions:
+        - label: varlib
+  luks:
+    - clevis:
+        custom:
+          config: '{"pcr_bank":"sha256","pcr_ids":"7"}'
+          needs_network: true
+          pin: tpm2
+      device: /dev/disk/by-partlabel/varlib
+      key_file:
+        source: 'data:,passphrase'
+      name: varlib
+  filesystems:
+    - device: /dev/disk/by-id/dm-name-varlib
+      format: xfs
+      path: /var/lib
+      with_mount_unit: true

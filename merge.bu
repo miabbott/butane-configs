@@ -1,0 +1,7 @@
+variant: fcos
+version: 1.1.0
+ignition:
+  config:
+    merge:
+      - local: miabbott.json
+      - local: poweroff.json

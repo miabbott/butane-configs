@@ -1,0 +1,19 @@
+variant: fcos
+version: 1.0.0
+passwd:
+  users:
+    - name: core
+      ssh_authorized_keys:
+          - ssh-rsa AAAA...
+systemd:
+  units:
+    - name: poweroff.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=Poweroff
+        [Service]
+        Type=oneshot
+        ExecStart=/usr/bin/systemctl poweroff
+        [Install]
+        WantedBy=multi-user.target

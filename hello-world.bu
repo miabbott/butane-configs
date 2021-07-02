@@ -1,0 +1,10 @@
+variant: fcos
+version: 1.0.0
+storage:
+  files:
+    -
+      path: /var/helloworld
+      overwrite: true
+      contents:
+        inline: Hello, world!
+      mode: 0644

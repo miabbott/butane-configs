@@ -1,0 +1,20 @@
+variant: fcos
+version: 1.2.0
+storage:
+  luks:
+    - name: tpm-example
+      device: /dev/sdc
+      clevis:
+        tpm2: true
+        tang:
+          - url: https://tang.example.com
+            thumbprint: REPLACE-THIS-WITH-YOUR-TANG-THUMBPRINT
+          - url: https://tang2.example.com
+            thumbprint: REPLACE-THIS-WITH-YOUR-TANG-THUMBPRINT
+        threshold: 2
+  filesystems:
+    - path: /var/lib/tpm_example
+      device: /dev/disk/by-id/dm-name-tpm-example
+      format: ext4
+      label: TPM-EXAMPLE
+      with_mount_unit: true
