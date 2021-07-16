@@ -3,10 +3,9 @@ version: 1.0.0
 passwd:
   users:
     - name: core
-      # atomic
-      password_hash: ...
+      password_hash: $6$214bgL...
       ssh_authorized_keys:
-          - ssh-rsa AAAA...
+          - ssh-rsa AAAAB3N....
 systemd:
   units:
     - name: upgrade.service
@@ -28,7 +27,6 @@ storage:
       contents:
         inline: |
           [[registry]]
-          prefix = "example.com/rhcos"
           insecure = true
           blocked = false
           location = "192.168.122.1:5000/rhcos"
@@ -46,8 +44,8 @@ storage:
           set -xeou pipefail
           podman rm --force --all
           podman rmi --force --all
-          podman pull example.com/rhcos:4.8.0-fc.3
-          commit=$(skopeo inspect containers-storage:example.com/rhcos:4.8.0-fc.3 | jq -r '.["Labels"]["com.coreos.ostree-commit"]')
+          podman pull 192.168.122.1:5000/rhcos:4.8.0-fc.3
+          commit=$(skopeo inspect containers-storage:192.168.122.1:5000/rhcos:4.8.0-fc.3 | jq -r '.["Labels"]["com.coreos.ostree-commit"]')
           img=$(podman images -q)
           ctr=$(podman create ${img})
           mnt=$(podman mount ${ctr})
