@@ -59,7 +59,7 @@ storage:
           flags=1
           id=100
           ingress-priority-map=
-          parent=enp2s0
+          parent=enp1s0
           [ipv4]
           dns-search=
           may-fail=false
