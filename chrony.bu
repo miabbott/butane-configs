@@ -1,3 +1,4 @@
+---
 variant: openshift
 version: 4.8.0
 metadata:
