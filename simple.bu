@@ -1,0 +1,10 @@
+# a very basic Butane config with a `core` user that has password + ssh key
+---
+variant: fcos
+version: 1.2.0
+passwd:
+  users:
+    - name: core
+      password_hash: $6$214bgL...
+      ssh_authorized_keys:
+          - ssh-rsa AAAAB3N....
