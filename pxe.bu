@@ -1,0 +1,193 @@
+# a Butane config that sets up an FCOS node as DHCP/TFTP/PXE/HTTP server
+---
+variant: fcos
+version: 1.2.0
+passwd:
+  users:
+    - name: core
+      password_hash: $6$2....
+      ssh_authorized_keys:
+          - ssh-rsa AAAAB3Nz....
+systemd:
+  units:
+    # nginx http server via container
+    - name: nginx.service
+      enabled: true
+      contents: |
+        [Unit]
+        Description=nginx Server
+        After=network-online.target pxe-setup.service
+        Requires=network-online.target
+        [Service]
+        Restart=on-failure
+        ExecStartPre=-/usr/bin/podman pull docker.io/nginx:latest
+        ExecStartPre=-/usr/bin/podman kill nginx
+        ExecStartPre=-/usr/bin/podman rm nginx
+        ExecStart=/usr/bin/podman run --name nginx \
+                                      -p 80:80 \
+                                      -v /var/srv/http:/usr/share/nginx/html:z \
+                                      nginx
+        ExecStop=-/usr/bin/podman stop nginx
+        [Install]
+        WantedBy=multi-user.target
+    # service for populating FCOS/RHCOS artifacts
+    - name: pxe-setup.service
+      enabled: true
+      contents: |
+        [Unit]
+        Wants=network-online.target
+        After=network-online.target
+        ConditionPathExists=!/var/pxe-setup-done
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/usr/local/bin/pxe-setup.sh
+        [Install]
+        WantedBy=multi-user.target
+    # don't start dnsmasq until the PXE setup service completes
+    - name: dnsmasq.service
+      mask: false
+      enabled: true
+      dropins:
+        - name: 10-order.conf
+          contents: |
+            [Unit]
+            After=
+            After=network.target pxe-setup.service
+storage:
+  directories:
+    # configure TFTP directory
+    - path: /var/srv/tftp
+      user:
+        name: root
+      group:
+        name: root
+    # configure HTTP directory
+    - path: /var/srv/http
+      user:
+        name: root
+      group:
+        name: root
+  files:
+    # configure static IP on first interface for admin purposes
+    - path: /etc/NetworkManager/system-connections/enp1s0.nmconnection
+      mode: 0600
+      contents:
+        inline: |
+          [connection]
+          id=enp1s0
+          type=ethernet
+          interface-name=enp1s0
+          [ipv4]
+          address1=192.168.122.123/24,192.168.122.1
+          dns=192.168.122.1;
+          may-fail=false
+          method=manual
+    # configure static IP for DHCP/TFTP/HTTP on second interface
+    - path: /etc/NetworkManager/system-connections/enp2s0.nmconnection
+      mode: 0600
+      overwrite: true
+      contents:
+        inline: |
+          [connection]
+          id=enp2s0
+          type=ethernet
+          interface-name=enp2s0
+          [ipv4]
+          address1=192.168.200.123/24,192.168.200.1
+          dns=192.168.200.1;
+          may-fail=false
+          method=manual
+    # configure dnsmasq for TFTP/DHCP on second interface
+    - path: /etc/dnsmasq.conf
+      mode: 0644
+      overwrite: true
+      contents:
+        inline: |
+          port=0
+          interface=enp2s0
+          bind-interfaces
+          dhcp-range=192.168.200.200,192.168.200.210,12h
+          dhcp-option=option:router,192.168.200.1
+          dhcp-option=option:tftp-server,192.168.200.123
+          dhcp-option=option:dns-server,192.168.200.1
+          # match the EFI client option, set a tag, then service the grub EFI
+          # binary to the EFI client
+          dhcp-match=set:efi-x86_64,option:client-arch,7
+          dhcp-boot=tag:efi-x86_64,grubx64.efi
+          # serve the FCOS iPXE script to all other clients
+          # hope your client supports iPXE!
+          dhcp-boot=fcos.ipxe
+          enable-tftp
+          tftp-root=/var/srv/tftp
+    # grub.cfg needed for the grub EFI binary
+    - path: /var/srv/tftp/grub.cfg
+      mode: 0644
+      overwrite: true
+      contents:
+        inline: |
+          insmod efi_gop
+          insmod efi_uga
+
+          set timeout=5
+
+          menuentry 'Install Red Hat Enterprise Linux CoreOS' --class fedora --class gnu-linux --class gnu --class os {
+                  linuxefi rhcos-live-kernel-x86_64 coreos.inst.install_dev=/dev/sda coreos.live.rootfs_url=http://192.168.200.123/rhcos-live-rootfs.x86_64.img coreos.inst.ignition_url=http://192.168.200.123/ignition.json console=ttyS0
+                  initrdefi (http)/rhcos-live-initramfs.x86_64.img
+          }
+    # iPXE script for booting FCOS
+    - path: /var/srv/tftp/fcos.ipxe
+      mode: 0644
+      overwrite: true
+      contents:
+        inline: |
+          #!ipxe
+          set BASEURL http://192.168.200.123
+          set CONFIGURL http://192.168.200.123/ignition.json
+
+          kernel ${BASEURL}/fedora-coreos-live-kernel-x86_64 initrd=main coreos.live.rootfs_url=${BASEURL}/fedora-coreos-live-rootfs.x86_64.img ignition.firstboot ignition.platform.id=metal ignition.config.url=${CONFIGURL} console=ttyS0
+          initrd --name main ${BASEURL}/fedora-coreos-live-initramfs.x86_64.img
+
+          boot
+    # Ignition config served to clients (works for FCOS/RHCOS)
+    # forgive my sin of writing out an Ignition config via a Butane config
+    - path: /var/srv/http/ignition.json
+      mode: 0644
+      overwrite: true
+      contents:
+        inline: |
+          {"ignition":{"version":"3.2.0"},"passwd":{"users":[{"name":"core","passwordHash":"$6$2....","sshAuthorizedKeys":["ssh-rsa AAAAB3NzaC1..."]}]}}
+   # utility script to download FCOS/RHCOS artifacts and copy EFI binary
+    - path: /usr/local/bin/pxe-setup.sh
+      mode: 0744
+      overwrite: true
+      contents:
+        inline: |
+          #!/usr/bin/bash
+          set -xeou pipefail
+          tftp_dir="/var/srv/tftp"
+          http_dir="/var/srv/http"
+          # get latest FCOS stable build version
+          fcos_version=$(curl -Ls https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/builds.json | jq -r .builds[0].id)
+          # mount the EFI partition, find the grub EFI, then copy it to
+          # TFTP directory
+          mount -o ro /dev/disk/by-partlabel/EFI-SYSTEM /boot/efi
+          find /boot/efi -type f -name grubx64.efi -exec cp {} ${tftp_dir} \;
+          umount /boot/efi
+          pushd ${tftp_dir}
+          # copy the RHCOS kernel to the TFTP directory
+          curl -LOs https://mirror.openshift.com/pub/openshift-v4/x86_64/dependencies/rhcos/4.8/latest/rhcos-live-kernel-x86_64
+          pushd ${http_dir}
+          # copy the RHCOS 4.8 initramfs/kernel to the HTTP directory
+          # did you know that grub can load the initrd via http?!
+          curl -LOs https://mirror.openshift.com/pub/openshift-v4/x86_64/dependencies/rhcos/4.8/latest/rhcos-live-initramfs.x86_64.img
+          curl -LOs https://mirror.openshift.com/pub/openshift-v4/x86_64/dependencies/rhcos/4.8/latest/rhcos-live-rootfs.x86_64.img
+          # copy all the FCOS artifacts to the HTTP directory
+          # loading kernel, initrd via HTTP in iPXE is so much easier
+          curl -o fedora-coreos-live-kernel-x86_64 -Ls https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/${fcos_version}/x86_64/fedora-coreos-${fcos_version}-live-kernel-x86_64
+          curl -o fedora-coreos-live-rootfs.x86_64.img -Ls https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/${fcos_version}/x86_64/fedora-coreos-${fcos_version}-live-rootfs.x86_64.img
+          curl -o fedora-coreos-live-initramfs.x86_64.img -Ls https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/${fcos_version}/x86_64/fedora-coreos-${fcos_version}-live-initramfs.x86_64.img
+          # label the TFTP directory so that dnsmasq can access it
+          chcon -R -t tftpdir_t ${tftp_dir}
+          # leave a marker so the script only runs once
+          touch /var/pxe-setup-done
