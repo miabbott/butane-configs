@@ -114,7 +114,7 @@ storage:
           # match the EFI client option, set a tag, then service the grub EFI
           # binary to the EFI client
           dhcp-match=set:efi-x86_64,option:client-arch,7
-          dhcp-boot=tag:efi-x86_64,grubx64.efi
+          dhcp-boot=tag:efi-x86_64,shimx64.efi
           # serve the FCOS iPXE script to all other clients
           # hope your client supports iPXE!
           dhcp-boot=fcos.ipxe
@@ -169,11 +169,18 @@ storage:
           http_dir="/var/srv/http"
           # get latest FCOS stable build version
           fcos_version=$(curl -Ls https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/builds.json | jq -r .builds[0].id)
-          # mount the EFI partition, find the grub EFI, then copy it to
-          # TFTP directory
-          mount -o ro /dev/disk/by-partlabel/EFI-SYSTEM /boot/efi
-          find /boot/efi -type f -name grubx64.efi -exec cp {} ${tftp_dir} \;
-          umount /boot/efi
+          # get the signed EFI shim binary + grub EFI binary from the RHCOS
+          # live ISO
+          mkdir -p /mnt/{iso,efiboot}
+          tmpdir=$(mktemp -d)
+          pushd ${tmpdir}
+          curl -LOs https://mirror.openshift.com/pub/openshift-v4/x86_64/dependencies/rhcos/4.8/latest/rhcos-live.x86_64.iso
+          mount -o loop rhcos-live.x86_64.iso /mnt/iso
+          mount -o loop,ro /mnt/iso/images/efiboot.img /mnt/efiboot
+          cp /mnt/efiboot/EFI/redhat/{shimx64.efi,grubx64.efi} ${tftp_dir}
+          umount /mnt/{efiboot,iso}
+          popd
+          rm -rf ${tmpdir}
           pushd ${tftp_dir}
           # copy the RHCOS kernel to the TFTP directory
           curl -LOs https://mirror.openshift.com/pub/openshift-v4/x86_64/dependencies/rhcos/4.8/latest/rhcos-live-kernel-x86_64
