@@ -1,3 +1,6 @@
+# This can be used to verify:
+# https://bugzilla.redhat.com/show_bug.cgi?id=1969998
+# https://bugzilla.redhat.com/show_bug.cgi?id=1973418
 ---
 variant: fcos
 version: 1.0.0
@@ -8,7 +11,7 @@ passwd:
           - ssh-rsa AAAA...
 storage:
   files:
-    - path: /etc/kubernetes/kubelet-pause-image-override
+    - path: /etc/kubernetes/test
       contents:
         inline: |
           PAUSE="registry.fedoraproject.org/fedora:34"
@@ -23,7 +26,7 @@ systemd:
         [Service]
         Type=oneshot
         RemainAfterExit=yes
-        EnvironmentFile=/etc/kubernetes/kubelet-pause-image-override
+        EnvironmentFile=/etc/kubernetes/test
         ExecStart=/usr/bin/echo ${PAUSE}
         [Install]
         WantedBy=multi-user.target
